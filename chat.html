@@ -1,0 +1,81 @@
+<html>
+  <head>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <script src="https://code.jquery.com/jquery-3.1.1.min.js" integrity="sha256-hVVnYaiADRTO2PzUGmuLJr8BLUSjGIZsDYGmIJLv2b8=" crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.0.3/socket.io.js"></script>
+  </head>
+  <body>
+    <div class="modal fade" id="nameModal" tabindex="-1" role="dialog">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h4 class="modal-title">Modal title</h4>
+          </div>
+          <form id="nameForm">
+            <div class="modal-body">
+              <p>Your name is</p>
+              <input type="text" class="form-control" id="nameInput" placeholder="This will be visible to everyone..">
+            </div>
+            <div class="modal-footer">
+              <button type="submit" class="btn btn-primary">Apply</button>
+            </div>
+          </form>
+        </div><!-- /.modal-content -->
+      </div><!-- /.modal-dialog -->
+    </div><!-- /.modal -->
+    <div class="container">
+      <div class="col-md-8">
+        <br>
+        <div class="panel panel-default">
+          <div class="panel-heading">
+            <h3 class="panel-title">Chat room</h3>
+          </div>
+          <ul class="list-group" id="chatList">
+          </ul>
+          <div class="panel-footer">
+            <form id="messageForm">
+              <div class="input-group">
+                <input type="text" class="form-control" id="messageInput" placeholder="Hello!" autocomplete="off">
+                <span class="input-group-btn">
+                  <button class="btn btn-default" type="submit">Send</button>
+                </span>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script>
+      var name;
+      var socket = io();
+      $(() => {
+        $('#nameModal').modal({
+          backdrop: 'static',
+          keyboard: false,
+        });
+        $('#nameForm').submit(event => {
+          if($('#nameInput').val() === '') return false;
+          name = $('#nameInput').val();
+          socket.emit('name', {name});
+          $('#nameModal').modal('hide');
+          $('#messageInput').attr('placeholder', 'Say something, ' + name);
+          event.preventDefault();
+        });
+        $('#messageForm').submit(event => {
+          socket.emit('message', $('#messageInput').val());
+          $('#messageInput').val('');
+          socket.emit('typing', '');
+          event.preventDefault();
+        });
+        $('#messageInput').on('input', () => {
+          socket.emit('typing', $('#messageInput').val());
+        });
+        socket.on('message', data => {
+          console.log('!!!');
+          $('#chatList').append($('<li class="list-group-item">').text(data.by + ': ' + data.text));
+        });
+      });
+    </script>
+  </body>
+</html>
