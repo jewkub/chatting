@@ -1,11 +1,15 @@
+'use strict';
+
 var express = require('express');
 var app = express();
 var http = require('http').createServer(app);
 var io = require('socket.io')(http);
+var favicon = require('serve-favicon');
 app.set('port', 8080);
 app.set('ip', '0.0.0.0');
 
 // route
+app.use(favicon(__dirname + '/favicon.ico'));
 app.get('/', (req, res, next) => {
   res.send('aa');
 });
@@ -14,6 +18,9 @@ app.get('/chat', (req, res, next) => {
 });
 app.get('/monitor', (req, res, next) => {
   res.sendFile(__dirname + '/monitor.html');
+});
+app.get('/draw', (req, res, next) => {
+  res.sendFile(__dirname + '/draw.html');
 });
 
 // error handle
@@ -31,19 +38,19 @@ app.use((err, req, res, next) => {
 let users = {};
 let monio = io.of('/monitor');
 let monSocket;
-let changeTyping = () => {
+let updateMonitor = () => {
   monio.emit('userChange', users);
   //console.log(users);
 };
 io.on('connection', socket => {
   let name = 'Anonymous';
-  console.log('user connected');
 
   socket.emit('connect', true);
   socket.on('name', data => {
     name = data.name;
     users[name] = '';
-    changeTyping();
+    updateMonitor();
+    console.log(name + ' has joined');
   });
   socket.on('message', text => {
     console.log('message: "' + text + '" emitted by ' + name);
@@ -52,28 +59,34 @@ io.on('connection', socket => {
       by: name,
     });
   });
+  socket.on('imageSend', img => {
+    console.log('image: (image) emitted by' + name);
+    io.emit('image', {
+      img,
+      by: name,
+    });
+  });
   socket.on('typing', text => {
     console.log('typing: "' + text + '" emitted by ' + name);
     users[name] = text;
-    changeTyping();
+    updateMonitor();
   });
-
-  socket.on('check-presence', username => {
-      let isUserPresent = users[username] === undefined;
-      socket.emit('presence', isUserPresent);
+  socket.on('drawing', data => {
+    console.log('drawing: (image) emitted by ' + name);
+    users[name] = data;
+    updateMonitor();
   });
-
   // removing user on "disconnect"
   socket.on('disconnect', () => {
     if (users[name] !== undefined){
       delete users[name];
-      changeTyping();
+      updateMonitor();
     }
   });
 });
 monio.on('connection', socket => {
   monSocket = socket;
-  changeTyping();
+  updateMonitor();
 });
 
 // listen

@@ -4,6 +4,7 @@
     <script src="https://code.jquery.com/jquery-3.1.1.min.js" integrity="sha256-hVVnYaiADRTO2PzUGmuLJr8BLUSjGIZsDYGmIJLv2b8=" crossorigin="anonymous"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.0.3/socket.io.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/1.7.16/fabric.min.js"></script>
   </head>
   <body>
     <div class="container">
@@ -19,14 +20,18 @@
       </div>
     </div>
     <script>
+      'use strict';
+      var cv;
       $(() => {
         var socket = io('/monitor');
         socket.on('userChange', data => {
           $('#typingList').empty();
           Object.keys(data).forEach(function(e, i, arr) {
-            $('#typingList').append('<li class="list-group-item">' + e + ': ' + data[e] + '</li>');
+            //console.log(data[e]);
+            $('#typingList').append($('<li class="list-group-item"><p>' + e + ': </p></li>').append('<img src="' + data[e] + '"></img>'));
+            console.log(data);
           });
-          console.log(data);
+          //console.log(data);
         });
       });
     </script>
