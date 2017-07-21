@@ -5,12 +5,14 @@
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.0.3/socket.io.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/1.7.16/fabric.min.js"></script>
+    <script src="http://underscorejs.org/underscore-min.js"></script>
+    <script src="http://backbonejs.org/backbone-min.js"></script>
   </head>
   <body>
     <div class="container">
       <div class="col-md-8">
         <br>
-        <div class="panel panel-default">
+        <div class="panel panel-default" id="root">
           <div class="panel-heading">
             <h3 class="panel-title">Their thought ...</h3>
           </div>
@@ -21,19 +23,100 @@
     </div>
     <script>
       'use strict';
+      var im;
+      var z;
+      $(() => {
+        var Image = Backbone.Model.extend({
+          defaults: () => ({
+            order: Images.nextOrder(),
+            img: false,
+            name: '',
+          }),
+        });
+        var ImageList = Backbone.Collection.extend({
+          model: Image,
+          nextOrder: function(){
+            if(!this.length) return 1;
+            return this.last().get('order') + 1;
+          },
+          comparator: 'order',
+        });
+        var Images = new ImageList;
+        im = Images;
+        var ImageView = Backbone.View.extend({
+          tagName: 'li',
+          className: 'list-group-item',
+          template: _.template('<p><%- name %>: </p><img src="<%= img %>"></img>'),
+          render: function(){
+            //console.log(this);
+            z = this;
+            this.$el.html(this.template(this.model.toJSON()));
+            return this;
+          },
+          initialize: function(){
+            //console.log(this.fetch);
+            this.listenTo(this.model, 'change', this.render);
+            this.listenTo(this.model, 'remove', this.remove);
+          }
+        });
+        var AppView = Backbone.View.extend({
+          el: $('#root'),
+          initialize: function(){
+            this.listenTo(Images, 'add', function(e){
+              this.addOne(e);
+            });
+          },
+          render: function(){
+            return this;
+          },
+          addOne: function(model){
+            var view = new ImageView({
+              model
+            });
+            this.$('#typingList').append(view.render().el);
+          },
+          addAll: function(model){
+            Images.each(this.addOne, this);
+          },
+        });
+        var App = new AppView;
+        var socket = io('/monitor');
+        socket.on('userChange', data => {
+          let search = () => Images.findWhere({
+            name: data.name
+          });
+          if(data.img === undefined){
+            Images.remove(search());
+          }
+          else {
+            let x = search();
+            if(x) x.set('img', data.img);
+            else Images.add(data);
+          }
+        });
+        socket.on('allUsers', data => {
+          Images.reset();
+          Object.keys(data).forEach(e => {
+            Images.add(new Image({
+              name: e,
+              img: data[e],
+            }));
+          });
+        });
+      });
+    </script>
+    <!-- <script>
+      'use strict';
       var cv;
       $(() => {
         var socket = io('/monitor');
         socket.on('userChange', data => {
           $('#typingList').empty();
           Object.keys(data).forEach(function(e, i, arr) {
-            //console.log(data[e]);
             $('#typingList').append($('<li class="list-group-item"><p>' + e + ': </p></li>').append('<img src="' + data[e] + '"></img>'));
-            console.log(data);
           });
-          //console.log(data);
         });
       });
-    </script>
+    </script> -->
   </body>
 </html>
