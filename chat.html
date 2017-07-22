@@ -93,6 +93,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.0.3/socket.io.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/1.7.16/fabric.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jscolor/2.0.4/jscolor.min.js"></script>
+    <script src="http://underscorejs.org/underscore-min.js"></script>
+    <script src="http://backbonejs.org/backbone-min.js"></script>
   </head>
   <body>
     <div class="modal fade" id="nameModal" tabindex="-1" role="dialog">
@@ -114,7 +116,7 @@
       </div><!-- /.modal-dialog -->
     </div><!-- /.modal -->
     <div class="container">
-      <div class="col-xs-8">
+      <div class="col-xs-12 col-md-7">
         <br>
         <div class="panel panel-default">
           <div class="panel-heading">
@@ -132,7 +134,7 @@
             </div>
             <br>
             <div class="row">
-              <div class="col-xs-10">
+              <div class="col-xs-12">
                 <form class="form-horizontal" id="inputForm">
                   <div class="form-group">
                     <div class="col-xs-2">
@@ -183,8 +185,9 @@
         canvas.freeDrawingBrush.color = '#' + picker;
       };
       var name;
-      var socket = io();
+      var socket = io('/chat');
       $(() => {
+        //canvas
         $('canvas').attr('width', 600/window.devicePixelRatio);
         $('canvas').attr('height', 600/window.devicePixelRatio);
         canvas = new fabric.Canvas('c');
@@ -200,10 +203,17 @@
         canvas.on('mouse:up', option => {
           socket.emit('drawing', canvas.toDataURL());
         });
+  
+        //modal
+        $('#nameModal').on('shown.bs.modal', function () {
+          $('#nameInput').focus();
+        });
         $('#nameModal').modal({
           backdrop: 'static',
           keyboard: false,
         });
+
+        //form
         $('#nameForm').submit(event => {
           if($('#nameInput').val() === '') return false;
           name = $('#nameInput').val();
@@ -228,12 +238,14 @@
           socket.emit('drawing', canvas.toDataURL());
           event.preventDefault();
         });
-        socket.on('message', data => {
+
+        //socket
+        /*socket.on('message', data => {
           console.log('!!!');
-          $('#chatList').append($('<li class="list-group-item">').text(data.by + ': ' + data.text));
-        });
+          $('#chatList').append($('<li class="list-group-item">').text(data.name + ': ' + data.text));
+        });*/
         socket.on('image', data => {
-          $('#chatList').append($('<li class="list-group-item">').append('<img src="' + data.img + '"></img>'));
+          $('#chatList').append($('<li class="list-group-item">').append('<p>' + data.name + ': </p><img src="' + data.img + '"></img>'));
         });
       });
     </script>

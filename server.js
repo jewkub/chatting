@@ -36,57 +36,62 @@ app.use((err, req, res, next) => {
 
 // socket.io
 let users = {};
-let monio = io.of('/monitor');
+let monIo = io.of('/monitor');
+let chatIo = io.of('/chat');
 let monSocket;
-let updateMonitor = () => {
-  monio.emit('userChange', users);
+let updateMonitor = name => {
+  monIo.emit('userChange', {
+    img: users[name],
+    name,
+  });
   //console.log(users);
 };
-io.on('connection', socket => {
+chatIo.on('connection', socket => {
   let name = 'Anonymous';
 
   socket.emit('connect', true);
   socket.on('name', data => {
     name = data.name;
     users[name] = '';
-    updateMonitor();
+    updateMonitor(name);
     console.log(name + ' has joined');
   });
-  socket.on('message', text => {
+  /*socket.on('message', text => {
     console.log('message: "' + text + '" emitted by ' + name);
-    io.emit('message', {
+    chatIo.emit('message', {
       text,
-      by: name,
+      name,
     });
-  });
+  });*/
   socket.on('imageSend', img => {
     console.log('image: (image) emitted by' + name);
-    io.emit('image', {
+    chatIo.emit('image', {
       img,
-      by: name,
+      name,
     });
   });
-  socket.on('typing', text => {
+  /*socket.on('typing', text => {
     console.log('typing: "' + text + '" emitted by ' + name);
     users[name] = text;
-    updateMonitor();
-  });
+    updateMonitor(name);
+  });*/
   socket.on('drawing', data => {
     console.log('drawing: (image) emitted by ' + name);
     users[name] = data;
-    updateMonitor();
+    updateMonitor(name);
   });
   // removing user on "disconnect"
   socket.on('disconnect', () => {
+    console.log(name + ' has left');
     if (users[name] !== undefined){
       delete users[name];
-      updateMonitor();
+      updateMonitor(name);
     }
   });
 });
-monio.on('connection', socket => {
+monIo.on('connection', socket => {
   monSocket = socket;
-  updateMonitor();
+  socket.emit('allUsers', users);
 });
 
 // listen
