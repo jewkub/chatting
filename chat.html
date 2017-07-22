@@ -185,7 +185,7 @@
         canvas.freeDrawingBrush.color = '#' + picker;
       };
       var name;
-      var socket = io();
+      var socket = io('/chat');
       $(() => {
         //canvas
         $('canvas').attr('width', 600/window.devicePixelRatio);

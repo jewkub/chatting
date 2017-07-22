@@ -36,16 +36,17 @@ app.use((err, req, res, next) => {
 
 // socket.io
 let users = {};
-let monio = io.of('/monitor');
+let monIo = io.of('/monitor');
+let chatIo = io.of('/chat');
 let monSocket;
 let updateMonitor = name => {
-  monio.emit('userChange', {
+  monIo.emit('userChange', {
     img: users[name],
     name,
   });
   //console.log(users);
 };
-io.on('connection', socket => {
+chatIo.on('connection', socket => {
   let name = 'Anonymous';
 
   socket.emit('connect', true);
@@ -57,14 +58,14 @@ io.on('connection', socket => {
   });
   /*socket.on('message', text => {
     console.log('message: "' + text + '" emitted by ' + name);
-    io.emit('message', {
+    chatIo.emit('message', {
       text,
       name,
     });
   });*/
   socket.on('imageSend', img => {
     console.log('image: (image) emitted by' + name);
-    io.emit('image', {
+    chatIo.emit('image', {
       img,
       name,
     });
@@ -88,7 +89,7 @@ io.on('connection', socket => {
     }
   });
 });
-monio.on('connection', socket => {
+monIo.on('connection', socket => {
   monSocket = socket;
   socket.emit('allUsers', users);
 });
