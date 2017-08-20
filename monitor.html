@@ -92,11 +92,11 @@
             this.$('#timeButton').attr('disabled', 'disabled');
             this.$('#activateButton').attr('disabled', 'disabled');
             window.setTimeout(() => {
-              this.$('#timeButton').removeAttr('disabled');
               this.$('#activateButton').removeAttr('disabled');
             }, time);
           },
           activate: function(){
+            this.$('#timeButton').removeAttr('disabled');
             socket.emit('activate', true);
           },
           events: {
