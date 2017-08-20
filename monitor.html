@@ -9,15 +9,23 @@
     <script src="http://backbonejs.org/backbone-min.js"></script>
   </head>
   <body>
-    <div class="container">
+    <div class="container" id="root">
       <div class="col-md-8">
         <br>
-        <div class="panel panel-default" id="root">
+        <div class="panel panel-default">
           <div class="panel-heading">
             <h3 class="panel-title">Their thought ...</h3>
           </div>
-          <ul class="list-group" id="typingList">
+          <ul class="list-group" id="drawingList">
           </ul>
+          <div class="panel-footer">
+            <button class="btn btn-default" id="timeButton">
+              Send Time Limit (5s)
+            </button>
+            <button class="btn btn-default" id="activateButton">
+              Clear and Re-activate Drawing
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -73,10 +81,27 @@
             var view = new ImageView({
               model
             });
-            this.$('#typingList').append(view.render().el);
+            this.$('#drawingList').append(view.render().el);
           },
           addAll: function(model){
             Images.each(this.addOne, this);
+          },
+          timeLimit: function(){
+            let time = 5000;
+            socket.emit('timeLimit', time);
+            this.$('#timeButton').attr('disabled', 'disabled');
+            this.$('#activateButton').attr('disabled', 'disabled');
+            window.setTimeout(() => {
+              this.$('#timeButton').removeAttr('disabled');
+              this.$('#activateButton').removeAttr('disabled');
+            }, time);
+          },
+          activate: function(){
+            socket.emit('activate', true);
+          },
+          events: {
+            'click #timeButton': 'timeLimit',
+            'click #activateButton': 'activate',
           },
         });
         var App = new AppView;
@@ -105,18 +130,5 @@
         });
       });
     </script>
-    <!-- <script>
-      'use strict';
-      var cv;
-      $(() => {
-        var socket = io('/monitor');
-        socket.on('userChange', data => {
-          $('#typingList').empty();
-          Object.keys(data).forEach(function(e, i, arr) {
-            $('#typingList').append($('<li class="list-group-item"><p>' + e + ': </p></li>').append('<img src="' + data[e] + '"></img>'));
-          });
-        });
-      });
-    </script> -->
   </body>
 </html>

@@ -94,6 +94,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/1.7.16/fabric.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jscolor/2.0.4/jscolor.min.js"></script>
     <script src="http://underscorejs.org/underscore-min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.18.1/moment.min.js"></script>
     <script src="http://backbonejs.org/backbone-min.js"></script>
   </head>
   <body>
@@ -116,7 +117,7 @@
       </div><!-- /.modal-dialog -->
     </div><!-- /.modal -->
     <div class="container">
-      <div class="col-xs-12 col-md-7">
+      <div class="col-xs-9 col-md-7">
         <br>
         <div class="panel panel-default">
           <div class="panel-heading">
@@ -137,19 +138,18 @@
               <div class="col-xs-12">
                 <form class="form-horizontal" id="inputForm">
                   <div class="form-group">
-                    <div class="col-xs-2">
+                    <div class="col-xs-10">
                       <button class="btn btn-default" type="button" id="clearButton">
                         Clear
                       </button>
-                    </div>
-                    <div class="col-xs-2">
                       <button class="btn btn-default jscolor {closable:true,closeText:'Close',onFineChange:'update(this)',valueElement:null,value:'000000'}" type="button" id="colorButton">
                         Color
                       </button>
-                    </div>
-                    <div class="col-xs-8">
                       <button class="btn btn-default" type="submit" style="float:right">
                         Send
+                      </button>
+                      <button class="btn btn-default" type="button" id="undoButton">
+                        Undo
                       </button>
                     </div>
                   </div>
@@ -159,39 +159,58 @@
                       Brush size
                     </label>
                     <div class="col-xs-10">
-                      <input type="range" min="1" max="40" id="sizeInput" value="1">
+                      <input type="range" min="1" max="32" id="sizeInput" value="1">
                     </div>
                   </div>
                 </form>
               </div>
             </div>
-            <!-- <form id="messageForm">
-              <div class="input-group">
-                <input type="text" class="form-control" id="messageInput" placeholder="Hello!" autocomplete="off">
-                <span class="input-group-btn">
-                  <button class="btn btn-default" type="submit">Send</button>
-                </span>
-              </div>
-            </form> -->
           </div>
         </div>
       </div>
+      <div class="col-md-5 col-xs-3">
+        <br>
+        <p id="timer">
+        </p>
+      </div>
     </div>
     <script>
+      moment.relativeTimeThreshold('ss', 2);
+      moment.relativeTimeRounding(a => a);
+      moment.updateLocale('en', {
+        relativeTime : {
+          future: "%s",
+          past:   "%s ago",
+          s:  "%d seconds",
+          m:  "a minute",
+          mm: "%d minutes",
+          h:  "an hour",
+          hh: "%d hours",
+          d:  "a day",
+          dd: "%d days",
+          M:  "a month",
+          MM: "%d months",
+          y:  "a year",
+          yy: "%d years"
+        }
+      });
+    </script>
+    <script>
       'use strict';
-      alert(window.devicePixelRatio);
+      console.log(window.devicePixelRatio);
       var canvas;
       var update = picker => {
         canvas.freeDrawingBrush.color = '#' + picker;
       };
       var name;
+      var timeout = false;
       var socket = io('/chat');
       $(() => {
         //canvas
         $('canvas').attr('width', 600/window.devicePixelRatio);
         $('canvas').attr('height', 600/window.devicePixelRatio);
         canvas = new fabric.Canvas('c');
-        console.log(canvas);
+        canvas.selection = false;
         canvas.isDrawingMode = true;
         $('#clearButton').click(event => {
           canvas.clear();
@@ -201,6 +220,15 @@
           canvas.freeDrawingBrush.width = parseInt($('#sizeInput').val());
         });
         canvas.on('mouse:up', option => {
+          if(timeout) {
+            canvas.remove(canvas.item(canvas.size()-1));
+            canvas.isDrawingMode = false;
+            canvas.forEachObject(o => {
+              o.selectable = false;
+              o.evented = false;
+            });
+            timeout = false;
+          }
           socket.emit('drawing', canvas.toDataURL());
         });
   
@@ -214,6 +242,10 @@
         });
 
         //form
+        $('#undoButton').click(event => {
+          canvas.remove(canvas.item(canvas.size()-1));
+          socket.emit('drawing', canvas.toDataURL());
+        });
         $('#nameForm').submit(event => {
           if($('#nameInput').val() === '') return false;
           name = $('#nameInput').val();
@@ -223,15 +255,6 @@
           $('#messageInput').attr('placeholder', 'Say something, ' + name);
           event.preventDefault();
         });
-        /*$('#messageForm').submit(event => {
-          socket.emit('message', $('#messageInput').val());
-          $('#messageInput').val('');
-          socket.emit('typing', '');
-          event.preventDefault();
-        });
-        $('#messageInput').on('input', () => {
-          socket.emit('typing', $('#messageInput').val());
-        });*/
         $('#inputForm').submit(event => {
           socket.emit('imageSend', canvas.toDataURL());
           canvas.clear();
@@ -240,12 +263,43 @@
         });
 
         //socket
-        /*socket.on('message', data => {
-          console.log('!!!');
-          $('#chatList').append($('<li class="list-group-item">').text(data.name + ': ' + data.text));
-        });*/
         socket.on('image', data => {
           $('#chatList').append($('<li class="list-group-item">').append('<p>' + data.name + ': </p><img src="' + data.img + '"></img>'));
+        });
+        socket.on('timeLimit', time => {
+          console.log(time);
+          $('#timer').show();
+          let countdown = moment().add(time, 'ms');
+          let timer;
+          timer = window.setInterval(() => {
+            if(moment().isAfter(countdown) || moment().isSame(countdown)){
+              $('#undoButton').attr('disabled', 'disabled');
+              $('#clearButton').attr('disabled', 'disabled');
+              $('#timer').text('Timeout !');
+              window.clearInterval(timer);
+              console.log('out');
+              if(canvas._isCurrentlyDrawing){
+                canvas.freeDrawingBrush.onMouseUp();
+                timeout = true;
+              }
+              else {
+                canvas.isDrawingMode = false;
+                canvas.forEachObject(o => {
+                  o.selectable = false;
+                  o.evented = false;
+                });
+              }
+            }
+            else $('#timer').text(moment().to(countdown) + ' left');
+          }, 1);
+        });
+        socket.on('activate', () => {
+          canvas.isDrawingMode = true;
+          $('#undoButton').removeAttr('disabled');
+          $('#clearButton').removeAttr('disabled');
+          $('#timer').text('');
+          canvas.clear();
+          socket.emit('drawing', canvas.toDataURL());
         });
       });
     </script>

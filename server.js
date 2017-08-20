@@ -38,7 +38,6 @@ app.use((err, req, res, next) => {
 let users = {};
 let monIo = io.of('/monitor');
 let chatIo = io.of('/chat');
-let monSocket;
 let updateMonitor = name => {
   monIo.emit('userChange', {
     img: users[name],
@@ -48,21 +47,13 @@ let updateMonitor = name => {
 };
 chatIo.on('connection', socket => {
   let name = 'Anonymous';
-
-  socket.emit('connect', true);
+  //socket.emit('connect', true);
   socket.on('name', data => {
     name = data.name;
     users[name] = '';
     updateMonitor(name);
     console.log(name + ' has joined');
   });
-  /*socket.on('message', text => {
-    console.log('message: "' + text + '" emitted by ' + name);
-    chatIo.emit('message', {
-      text,
-      name,
-    });
-  });*/
   socket.on('imageSend', img => {
     console.log('image: (image) emitted by' + name);
     chatIo.emit('image', {
@@ -70,11 +61,6 @@ chatIo.on('connection', socket => {
       name,
     });
   });
-  /*socket.on('typing', text => {
-    console.log('typing: "' + text + '" emitted by ' + name);
-    users[name] = text;
-    updateMonitor(name);
-  });*/
   socket.on('drawing', data => {
     console.log('drawing: (image) emitted by ' + name);
     users[name] = data;
@@ -90,8 +76,13 @@ chatIo.on('connection', socket => {
   });
 });
 monIo.on('connection', socket => {
-  monSocket = socket;
   socket.emit('allUsers', users);
+  socket.on('timeLimit', time => {
+    chatIo.emit('timeLimit', time);
+  });
+  socket.on('activate', () => {
+    chatIo.emit('activate', true);
+  });
 });
 
 // listen
